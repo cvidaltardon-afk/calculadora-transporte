@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Transporte — Chile</title>
+
+<!-- ═══ PWA META TAGS ═══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B4F72">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Transporte">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- ═══════════════════════ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --surface-2: #F0EFE9;
+    --border: #E2E0D8;
+    --border-strong: #C8C5B8;
+    --text: #1A1916;
+    --text-2: #6B6860;
+    --text-3: #9B9890;
+    --accent: #1B4F72;
+    --accent-light: #EBF4FB;
+    --accent-mid: #2E86C1;
+    --green: #1A5E36;
+    --green-light: #EAF5EE;
+    --amber: #7D5700;
+    --amber-light: #FDF3DC;
+    --red: #8B1A1A;
+    --red-light: #FEF0F0;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+    /* Evitar zoom en inputs en iOS */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* HEADER — respeta el notch del teléfono */
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: calc(var(--safe-top) + 18px) 24px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .header h1 { font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+  .header p { font-size: 12px; opacity: .7; margin-top: 1px; }
+
+  /* Banner de instalación */
+  #install-banner {
+    display: none;
+    background: #154360;
+    color: white;
+    padding: 10px 16px;
+    font-size: 13px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  #install-banner.visible { display: flex; }
+  #install-banner p { flex: 1; }
+  #install-banner button {
+    background: white; color: var(--accent);
+    border: none; border-radius: 6px;
+    padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+  #install-dismiss {
+    background: transparent !important;
+    color: rgba(255,255,255,.6) !important;
+    padding: 6px 8px !important;
+    font-size: 18px !important;
+  }
+
+  /* BODY LAYOUT */
+  .body {
+    padding: 20px 16px;
+    padding-bottom: calc(var(--safe-bottom) + 20px);
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-header .icon { font-size: 15px; }
+  .card-header span { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; }
+  .card-body { padding: 16px; }
+
+  /* FIELDS */
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--text-2); margin-bottom: 5px;
+  }
+  .field select, .field input {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 16px; /* 16px evita zoom automático en iOS */
+    font-family: 'DM Sans', sans-serif;
+    appearance: none; -webkit-appearance: none;
+    transition: border-color .15s;
+  }
+  .field select:focus, .field input:focus {
+    outline: none; border-color: var(--accent-mid);
+    box-shadow: 0 0 0 3px rgba(46,134,193,.12);
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .field .hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* FIXED PARAMS */
+  .fixed-params {
+    background: var(--accent-light);
+    border: 1px solid #BDD9EF;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex; flex-wrap: wrap; gap: 8px 16px;
+  }
+  .fp-item { display: flex; align-items: center; gap: 5px; }
+  .fp-icon { font-size: 13px; }
+  .fp-text { font-size: 12px; color: var(--accent); font-weight: 500; }
+
+  /* BTN */
+  .btn-calc {
+    width: 100%; padding: 13px;
+    background: var(--accent);
+    color: white; border: none;
+    border-radius: 8px; font-size: 14px;
+    font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; letter-spacing: .1px;
+    transition: background .15s, transform .1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-calc:hover { background: #154360; }
+  .btn-calc:active { transform: scale(.99); }
+  .btn-calc:disabled { background: var(--border-strong); cursor: not-allowed; }
+
+  /* RESULT TOTAL */
+  .result-total {
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius);
+    padding: 20px 18px;
+    margin-bottom: 14px;
+    position: relative; overflow: hidden;
+  }
+  .result-total::before {
+    content: '';
+    position: absolute; top: -20px; right: -20px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,.06);
+    border-radius: 50%;
+  }
+  .rt-route { font-size: 12px; opacity: .75; margin-bottom: 4px; }
+  .rt-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 36px; font-weight: 500;
+    letter-spacing: -1px; line-height: 1;
+    margin-bottom: 8px;
+  }
+  .rt-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rt-tag {
+    background: rgba(255,255,255,.15);
+    font-size: 11px; padding: 3px 10px;
+    border-radius: 20px; font-weight: 500;
+  }
+  .rt-tag.green { background: rgba(100,220,140,.2); }
+  .rt-tag.amber { background: rgba(255,200,60,.2); }
+
+  /* BREAKDOWN */
+  .breakdown-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .breakdown-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .breakdown-row.subtotal { border-top: 1px solid var(--border-strong); margin-top: 4px; padding-top: 10px; }
+  .br-left { display: flex; align-items: center; gap: 8px; }
+  .br-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .br-label { color: var(--text-2); }
+  .br-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .br-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px; font-weight: 500;
+  }
+
+  /* BARS */
+  .bar-wrap { margin-top: 14px; }
+  .bar-item { margin-bottom: 8px; }
+  .bar-info { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px; }
+  .bar-name { color: var(--text-2); }
+  .bar-pct { color: var(--text-3); }
+  .bar-track {
+    height: 6px; background: var(--surface-2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+  /* PROJECTION */
+  .proj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .proj-card {
+    background: var(--surface-2);
+    border-radius: 8px; padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .proj-card .pl { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+  .proj-card .pv {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px; font-weight: 500;
+    color: var(--text);
+  }
+  .proj-card .ps { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  /* FOOD ALERT */
+  .food-alert {
+    background: var(--amber-light);
+    border: 1px solid #E8C87A;
+    border-radius: 8px; padding: 10px 13px;
+    margin-bottom: 12px;
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 12px; color: var(--amber);
+    line-height: 1.5;
+  }
+  .food-alert .fa-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ROUTE INFO */
+  .route-info {
+    display: flex; gap: 0;
+    background: var(--surface-2);
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .ri-item {
+    flex: 1; padding: 10px 12px; text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .ri-item:last-child { border-right: none; }
+  .ri-label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+  .ri-value { font-size: 15px; font-weight: 600; color: var(--text); }
+  .ri-unit { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center; padding: 32px 20px;
+    color: var(--text-3);
+  }
+  .empty-state .es-icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-state p { font-size: 13px; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center; font-size: 11px; color: var(--text-3);
+    padding: 16px; line-height: 1.6;
+  }
+
+  /* ANIMATE */
+  .fade-in { animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🚗</div>
+  <div>
+    <h1>Calculadora de Transporte</h1>
+    <p>Desde Viña del Mar hacia ciudades de Chile</p>
+  </div>
+</div>
+
+<!-- Banner: aparece si la app aún no está instalada -->
+<div id="install-banner">
+  <p>📲 Instala esta app en tu celular para usarla sin internet</p>
+  <button id="install-btn">Instalar</button>
+  <button id="install-dismiss">✕</button>
+</div>
+
+<div class="body">
+
+  <!-- PARÁMETROS FIJOS -->
+  <div class="fixed-params">
+    <div class="fp-item"><span class="fp-icon">🔄</span><span class="fp-text">Siempre ida y vuelta</span></div>
+    <div class="fp-item"><span class="fp-icon">👤</span><span class="fp-text">1 pasajero</span></div>
+    <div class="fp-item"><span class="fp-icon">📅</span><span class="fp-text">1 viaje al mes</span></div>
+    <div class="fp-item"><span class="fp-icon">🍽</span><span class="fp-text">+$3.000 por cada 4h de viaje</span></div>
+    <div class="fp-item"><span class="fp-icon">🛏</span><span class="fp-text">+$30.000 alojamiento si RT > 12h</span></div>
+  </div>
+
+  <!-- VEHÍCULO -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">🚙</span>
+      <span>Vehículo y combustible</span>
+    </div>
+    <div class="card-body">
+      <div class="fields-2">
+        <div class="field">
+          <label>Consumo (km/L)</label>
+          <input type="number" id="kml" value="14" min="5" max="30" step="0.5" oninput="recalc()">
+          <div class="hint">Kia K3: ~14 km/L en ruta</div>
+        </div>
+        <div class="field">
+          <label>Precio bencina ($/L)</label>
+          <input type="number" id="fuel" value="1570" min="800" max="2500" step="10" oninput="recalc()">
+          <div class="hint">Bencina 93 · abr 2026</div>
+        </div>
+        <div class="field">
+          <label>Mantención ($/km)</label>
+          <input type="number" id="maint" value="15" min="0" max="150" step="1" oninput="recalc()">
+          <div class="hint">Aceite, neumáticos, filtros</div>
+        </div>
+        <div class="field">
+          <label>Depreciación ($/km)</label>
+          <input type="number" id="dep" value="0" min="0" max="200" step="5" oninput="recalc()">
+          <div class="hint">Opcional</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESTINO -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">📍</span>
+      <span>Destino</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Ciudad de destino</label>
+        <select id="ciudad" onchange="recalc()">
+          <option value="">— Selecciona una ciudad —</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="resultado"></div>
+
+  <div class="footer">
+    Origen: Viña del Mar · Peajes 2026, vehículo liviano, tarifa normal · Distancias referenciales por ruta real
+  </div>
+
+</div>
+
+<script>
+// ─── BASE DE DATOS DE CIUDADES ────────────────────────────────────────────────
+const ciudades = [
+  { nombre: "Quilpué",           region: "Valparaíso",           km: 15,   min: 18,  peaje: 0     },
+  { nombre: "Villa Alemana",     region: "Valparaíso",           km: 22,   min: 25,  peaje: 0     },
+  { nombre: "Limache",           region: "Valparaíso",           km: 30,   min: 32,  peaje: 0     },
+  { nombre: "Quillota",          region: "Valparaíso",           km: 38,   min: 38,  peaje: 3000  },
+  { nombre: "La Calera",         region: "Valparaíso",           km: 52,   min: 48,  peaje: 3000  },
+  { nombre: "Casablanca",        region: "Valparaíso",           km: 45,   min: 40,  peaje: 2700  },
+  { nombre: "San Antonio",       region: "Valparaíso",           km: 92,   min: 75,  peaje: 3000  },
+  { nombre: "Los Andes",         region: "Valparaíso",           km: 96,   min: 82,  peaje: 7000  },
+  { nombre: "La Ligua",          region: "Valparaíso",           km: 100,  min: 78,  peaje: 6500  },
+  { nombre: "Petorca",           region: "Valparaíso",           km: 128,  min: 102, peaje: 6500  },
+  { nombre: "Cabildo",           region: "Valparaíso",           km: 112,  min: 88,  peaje: 6500  },
+  { nombre: "Santiago",          region: "Metropolitana",        km: 130,  min: 90,  peaje: 5400  },
+  { nombre: "Maipú",             region: "Metropolitana",        km: 140,  min: 98,  peaje: 5400  },
+  { nombre: "San Bernardo",      region: "Metropolitana",        km: 148,  min: 105, peaje: 7200  },
+  { nombre: "Melipilla",         region: "Metropolitana",        km: 110,  min: 90,  peaje: 3500  },
+  { nombre: "Rancagua",          region: "O'Higgins",            km: 225,  min: 148, peaje: 9200  },
+  { nombre: "San Fernando",      region: "O'Higgins",            km: 262,  min: 175, peaje: 10600 },
+  { nombre: "Santa Cruz",        region: "O'Higgins",            km: 280,  min: 188, peaje: 10600 },
+  { nombre: "Pichilemu",         region: "O'Higgins",            km: 200,  min: 155, peaje: 7000  },
+  { nombre: "Curicó",            region: "Maule",                km: 315,  min: 195, peaje: 11700 },
+  { nombre: "Talca",             region: "Maule",                km: 345,  min: 215, peaje: 13000 },
+  { nombre: "Linares",           region: "Maule",                km: 390,  min: 242, peaje: 13800 },
+  { nombre: "Cauquenes",         region: "Maule",                km: 442,  min: 272, peaje: 14500 },
+  { nombre: "Constitución",      region: "Maule",                km: 380,  min: 240, peaje: 12000 },
+  { nombre: "Chillán",           region: "Ñuble",                km: 478,  min: 292, peaje: 16500 },
+  { nombre: "San Carlos",        region: "Ñuble",                km: 495,  min: 305, peaje: 16500 },
+  { nombre: "Los Ángeles",       region: "Biobío",               km: 550,  min: 335, peaje: 18500 },
+  { nombre: "Concepción",        region: "Biobío",               km: 592,  min: 358, peaje: 20000 },
+  { nombre: "Talcahuano",        region: "Biobío",               km: 598,  min: 365, peaje: 20000 },
+  { nombre: "Temuco",            region: "Araucanía",            km: 700,  min: 425, peaje: 22000 },
+  { nombre: "Villarrica",        region: "Araucanía",            km: 762,  min: 462, peaje: 23000 },
+  { nombre: "Pucón",             region: "Araucanía",            km: 790,  min: 478, peaje: 23000 },
+  { nombre: "Valdivia",          region: "Los Ríos",             km: 825,  min: 498, peaje: 24500 },
+  { nombre: "La Unión",          region: "Los Ríos",             km: 870,  min: 525, peaje: 25200 },
+  { nombre: "Osorno",            region: "Los Lagos",            km: 910,  min: 548, peaje: 26000 },
+  { nombre: "Puerto Montt",      region: "Los Lagos",            km: 985,  min: 595, peaje: 27000 },
+  { nombre: "Puerto Varas",      region: "Los Lagos",            km: 978,  min: 590, peaje: 27000 },
+  { nombre: "Castro (Chiloé)",   region: "Los Lagos",            km: 1108, min: 680, peaje: 28000 },
+  { nombre: "Ovalle",            region: "Coquimbo",             km: 330,  min: 202, peaje: 14500 },
+  { nombre: "La Serena",         region: "Coquimbo",             km: 420,  min: 265, peaje: 21100 },
+  { nombre: "Coquimbo",          region: "Coquimbo",             km: 430,  min: 272, peaje: 21500 },
+  { nombre: "Illapel",           region: "Coquimbo",             km: 245,  min: 162, peaje: 10500 },
+  { nombre: "Vallenar",          region: "Atacama",              km: 605,  min: 368, peaje: 25000 },
+  { nombre: "Copiapó",           region: "Atacama",              km: 730,  min: 450, peaje: 29000 },
+  { nombre: "Caldera",           region: "Atacama",              km: 770,  min: 475, peaje: 30000 },
+  { nombre: "Antofagasta",       region: "Antofagasta",          km: 1100, min: 660, peaje: 38000 },
+  { nombre: "Calama",            region: "Antofagasta",          km: 1200, min: 722, peaje: 40000 },
+  { nombre: "Iquique",           region: "Tarapacá",             km: 1480, min: 888, peaje: 50000 },
+  { nombre: "Arica",             region: "Arica y Parinacota",   km: 1680, min: 1010, peaje: 55000 },
+];
+
+// ─── POBLAR SELECT ─────────────────────────────────────────────────────────────
+function poblarSelect() {
+  const sel = document.getElementById('ciudad');
+  let currentRegion = '';
+  ciudades.forEach(c => {
+    if (c.region !== currentRegion) {
+      currentRegion = c.region;
+      const og = document.createElement('optgroup');
+      og.label = '— ' + c.region + ' —';
+      sel.appendChild(og);
+    }
+    const opt = document.createElement('option');
+    opt.value = c.nombre;
+    opt.textContent = c.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+function fmtMin(m) {
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return h + 'h ' + (min > 0 ? min + 'min' : '');
+}
+
+// ─── CALCULAR ─────────────────────────────────────────────────────────────────
+function recalc() {
+  const sel = document.getElementById('ciudad');
+  const nombre = sel.value;
+  const div = document.getElementById('resultado');
+
+  if (!nombre) {
+    div.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="es-icon">🗺</div>
+          <p>Selecciona una ciudad de destino para ver el cálculo</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const ciudad = ciudades.find(c => c.nombre === nombre);
+  if (!ciudad) return;
+
+  const kml   = parseFloat(document.getElementById('kml').value)   || 14;
+  const fuel  = parseFloat(document.getElementById('fuel').value)  || 1570;
+  const maint = parseFloat(document.getElementById('maint').value) || 15;
+  const dep   = parseFloat(document.getElementById('dep').value)   || 0;
+
+  const kmRT  = ciudad.km  * 2;
+  const minRT = ciudad.min * 2;
+
+  const cFuel   = (kmRT / kml) * fuel;
+  const cPeaje  = ciudad.peaje * 2;
+  const cMaint  = kmRT * (maint + dep);
+  const bloques = Math.floor(minRT / 240);
+  const cFood   = bloques * 3000;
+  const cHotel  = minRT >= 720 ? 30000 : 0;
+  const total   = cFuel + cPeaje + cMaint + cFood + cHotel;
+
+  const items = [
+    { label: 'Combustible',  value: cFuel,  color: '#2E86C1' },
+    { label: 'Peajes',       value: cPeaje, color: '#1A7A4E' },
+    { label: 'Mantención',   value: cMaint, color: '#E67E22' },
+    { label: 'Alimentación', value: cFood,  color: '#8E44AD' },
+    { label: 'Alojamiento',  value: cHotel, color: '#C0392B' },
+  ].filter(i => i.value > 0);
+
+  const bars = items.map(it => {
+    const pct = Math.round(it.value / total * 100);
+    return `
+      <div class="bar-item">
+        <div class="bar-info">
+          <span class="bar-name">${it.label}</span>
+          <span class="bar-pct">${fmt(Math.round(it.value))} · ${pct}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:${it.color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const breakdown = items.map(it => {
+    let sub = '';
+    if (it.label === 'Combustible')  sub = `${Math.round(kmRT/kml*10)/10} L × ${fmt(fuel)}`;
+    if (it.label === 'Peajes')       sub = `${fmt(ciudad.peaje)} × 2 vías`;
+    if (it.label === 'Mantención')   sub = `${kmRT} km × $${maint + dep}/km`;
+    if (it.label === 'Alimentación') sub = `${bloques} colación${bloques > 1 ? 'es' : ''} × $3.000 (cada 4h de viaje)`;
+    if (it.label === 'Alojamiento')  sub = 'Viaje RT supera 12 horas';
+    return `
+      <div class="breakdown-row">
+        <div class="br-left">
+          <div class="br-dot" style="background:${it.color}"></div>
+          <div>
+            <div class="br-label">${it.label}</div>
+            <div class="br-sub">${sub}</div>
+          </div>
+        </div>
+        <div class="br-value">${fmt(Math.round(it.value))}</div>
+      </div>`;
+  }).join('');
+
+  const foodAlert = cFood > 0 ? `
+    <div class="food-alert">
+      <span class="fa-icon">🍽</span>
+      <span>Viaje RT de <strong>${fmtMin(minRT)}</strong> → <strong>${bloques} colación${bloques > 1 ? 'es' : ''}</strong> × $3.000 = <strong>${fmt(cFood)}</strong> en alimentación (una por cada 4 horas de viaje).</span>
+    </div>` : '';
+
+  const hotelAlert = cHotel > 0 ? `
+    <div class="food-alert" style="background:#FEF0F0;border-color:#F1AEAD;color:#8B1A1A;">
+      <span class="fa-icon">🛏</span>
+      <span>Viaje RT supera las <strong>12 horas</strong> (${fmtMin(minRT)}). Se agrega <strong>$30.000 de alojamiento</strong>.</span>
+    </div>` : '';
+
+  div.innerHTML = `
+    <div class="result-total fade-in">
+      <div class="rt-route">Viña del Mar → ${nombre} · Ida y vuelta · ${kmRT} km</div>
+      <div class="rt-amount">${fmt(Math.round(total))}</div>
+      <div class="rt-tags">
+        <span class="rt-tag">${fmtMin(minRT)} de viaje</span>
+        <span class="rt-tag">${Math.round(kmRT/kml*10)/10} L de combustible</span>
+        ${cFood > 0 ? `<span class="rt-tag amber">${bloques} colación${bloques>1?'es':''} incluida${bloques>1?'s':''}</span>` : ''}
+        ${cHotel > 0 ? '<span class="rt-tag" style="background:rgba(220,100,100,.25)">Alojamiento incluido</span>' : ''}
+      </div>
+    </div>
+
+    ${foodAlert}
+    ${hotelAlert}
+
+    <div class="route-info fade-in">
+      <div class="ri-item">
+        <div class="ri-label">Distancia RT</div>
+        <div class="ri-value">${kmRT}</div>
+        <div class="ri-unit">kilómetros</div>
+      </div>
+      <div class="ri-item">
+        <div class="ri-label">Tiempo RT</div>
+        <div class="ri-value">${fmtMin(minRT)}</div>
+        <div class="ri-unit">estimado</div>
+      </div>
+      <div class="ri-item">
+        <div class="ri-label">Costo /km</div>
+        <div class="ri-value">${fmt(Math.round(total/kmRT))}</div>
+        <div class="ri-unit">pesos</div>
+      </div>
+      <div class="ri-item">
+        <div class="ri-label">Litros</div>
+        <div class="ri-value">${(kmRT/kml).toFixed(1)}</div>
+        <div class="ri-unit">consumo</div>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="card-header"><span class="icon">📊</span><span>Desglose de costos</span></div>
+      <div class="card-body">
+        ${breakdown}
+        <div class="breakdown-row subtotal">
+          <div class="br-left">
+            <div class="br-dot" style="background:var(--accent)"></div>
+            <div class="br-label" style="font-weight:600;color:var(--text)">Total del viaje</div>
+          </div>
+          <div class="br-value" style="font-size:16px;color:var(--accent)">${fmt(Math.round(total))}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="card-header"><span class="icon">📈</span><span>Composición</span></div>
+      <div class="card-body">
+        <div class="bar-wrap">${bars}</div>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="card-header"><span class="icon">📅</span><span>Proyección mensual y anual</span></div>
+      <div class="card-body">
+        <div class="proj-grid">
+          <div class="proj-card">
+            <div class="pl">Por mes (1 viaje)</div>
+            <div class="pv">${fmt(Math.round(total))}</div>
+            <div class="ps">ida y vuelta</div>
+          </div>
+          <div class="proj-card">
+            <div class="pl">Por año</div>
+            <div class="pv">${fmt(Math.round(total * 12))}</div>
+            <div class="ps">12 viajes</div>
+          </div>
+          <div class="proj-card">
+            <div class="pl">Solo combustible/mes</div>
+            <div class="pv">${fmt(Math.round(cFuel))}</div>
+            <div class="ps">${(kmRT/kml).toFixed(1)} L</div>
+          </div>
+          <div class="proj-card">
+            <div class="pl">Solo peajes/mes</div>
+            <div class="pv">${fmt(Math.round(cPeaje))}</div>
+            <div class="ps">tarifa normal 2026</div>
+          </div>
+          ${cFood > 0 ? `<div class="proj-card">
+            <div class="pl">Alimentación</div>
+            <div class="pv">${fmt(cFood)}</div>
+            <div class="ps">${bloques} colación${bloques>1?'es':''} × $3.000</div>
+          </div>` : ''}
+          ${cHotel > 0 ? `<div class="proj-card">
+            <div class="pl">Alojamiento</div>
+            <div class="pv">${fmt(cHotel)}</div>
+            <div class="ps">Viaje RT > 12h</div>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── PWA: SERVICE WORKER ──────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.warn('SW error:', err));
+  });
+}
+
+// ─── PWA: BANNER DE INSTALACIÓN ───────────────────────────────────────────────
+let deferredPrompt = null;
+const banner = document.getElementById('install-banner');
+const installBtn = document.getElementById('install-btn');
+const dismissBtn = document.getElementById('install-dismiss');
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  banner.classList.add('visible');
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('Instalación:', outcome);
+  deferredPrompt = null;
+  banner.classList.remove('visible');
+});
+
+dismissBtn.addEventListener('click', () => {
+  banner.classList.remove('visible');
+});
+
+window.addEventListener('appinstalled', () => {
+  banner.classList.remove('visible');
+  deferredPrompt = null;
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+poblarSelect();
+recalc();
+</script>
+</body>
+</html>
